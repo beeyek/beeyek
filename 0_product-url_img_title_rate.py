@@ -15,7 +15,7 @@ data_directory  = current_directory.joinpath("product-url_img_title_rate")
 
 
 
-site_url = 'https://www.amazon.com/'
+site_url = 'https://www.amazon.com'
 
 options = webdriver.ChromeOptions()
 options.add_argument("--start-maximized")
