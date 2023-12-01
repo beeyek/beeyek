@@ -35,7 +35,8 @@ except:
     system('python3 -m pip install fake_useragent')
     from fake_useragent import UserAgent
 
-def get_cookies_useragent(site_url):
+
+def get_driver(site_url):
     count = 0
     while True:
         count += 1
@@ -49,50 +50,68 @@ def get_cookies_useragent(site_url):
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--headless=new")
         PROXY_HOST = 'rp.proxyscrape.com'  # rotating proxy or host
-        PROXY_PORT = 6060 # port
-        PROXY_USER = 'x5x6d54u9x3pgr7' # username
-        PROXY_PASS = 'vel5vfhtwpo8yq4' # password
+        PROXY_PORT = 6060  # port
+        PROXY_USER = 'x5x6d54u9x3pgr7'  # username
+        PROXY_PASS = 'vel5vfhtwpo8yq4'  # password
 
         proxy_helper = SeleniumAuthenticatedProxy(
             proxy_url=f"http://{PROXY_USER}:{PROXY_PASS}@{PROXY_HOST}:{PROXY_PORT}")
 
         proxy_helper.enrich_chrome_options(options)
 
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()),options=options)
-        
+        driver = webdriver.Chrome(service=Service(
+            ChromeDriverManager().install()), options=options)
+
         driver.get(site_url)
         try:
-            WebDriverWait(driver, 2).until(EC.presence_of_element_located((By.XPATH, f'(//ol[@data-results-grid-container=""]/li)[1]')))
+            WebDriverWait(driver, 2).until(EC.presence_of_element_located(
+                (By.XPATH, f'(//ol[@data-results-grid-container=""]/li)[1]')))
             break
         except:
             driver.save_screenshot(f'err-{count}.png')
             driver.delete_all_cookies()
             driver.quit()
+
+    return driver
+
+
+driver = get_driver('https://www.etsy.com/de-en/search?q=mug&ref=search_bar')
+
+products_links = []
+count = 0
+next_page_url = ''
+while True:
+    if count != 0:
+        try:
+            WebDriverWait(driver, 2).until(EC.presence_of_element_located(
+                (By.XPATH, f'(//ol[@data-results-grid-container=""]/li)[1]')))
+        except:
+            driver = get_driver(next_page_url)
     
-    page_source = driver.page_source
-
-    with open('web_page_se.html', 'w', encoding='utf-8') as file:
-        file.write(page_source)
-    return driver.get_cookies(), usr_agent
-
-cookies, usr_agent = get_cookies_useragent('https://www.etsy.com/de-en/search?q=mug&ref=search_bar')
-
-cookies_str = '; '.join([f"{cookie['name']}={cookie['value']}" for cookie in cookies])
-
-headers = requests.utils.default_headers()
-headers.update({
-    'User-Agent': usr_agent,
-    'Cookie': cookies_str
-})
-
-response = requests.get('https://www.etsy.com/de-en/search?q=mug&ref=search_bar', headers=headers)
-
-with open('web_page_re.html', 'w', encoding='utf-8') as file:
-    file.write(response.content.decode('utf-8'))
-
-with open('headers.json', 'w', encoding='utf-8') as file:
-    json.dump(dict(headers), file, ensure_ascii=False, indent=4)
+    count += 1
 
 
-# 'https://www.etsy.com/de-en/search?q=mug&ref=search_bar'
-# nextPage_xpath = '//span[text()="Next"]/../../a[contains(@href,"pagination")]'
+    listing_links = WebDriverWait(driver, 10).until(EC.presence_of_all_elements_located(
+        (By.XPATH, f'(//ol[@data-results-grid-container=""]/li)//a[contains(@class,"listing-link")]')))
+
+    for link in listing_links:
+        products_links.append(link.get_attribute('href'))
+
+    print(count)
+    print(len(products_links))
+
+    next_page_url = WebDriverWait(driver, 10).until(EC.presence_of_element_located(
+        (By.XPATH, f'(//span[text()="Next"]/../../a)[1]'))).get_attribute('href')
+
+    if next_page_url:
+        print(next_page_url)
+        driver.get(next_page_url)
+    else:
+        break
+
+info = {
+    'products_links': products_links
+}
+
+with open('data.json', 'w') as file:
+        json.dump(info, file)
