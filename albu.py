@@ -32,9 +32,6 @@ def get_address(driver, location_url):
     else:
         while True:
             try:
-                print("----------------map_url----------------")
-                print(location_url)
-                print("----------------map_url----------------")
                 try:
                     driver.get(location_url)
                 except:
@@ -42,7 +39,7 @@ def get_address(driver, location_url):
                     raise Exception('failed to load page')
                 try:
                     address = WebDriverWait(driver, 10).until(EC.presence_of_element_located(
-                            (By.XPATH, '//img[contains(@src,"place") and contains(@src,"icon")]/../../..//span[text()!=""]'))).text
+                            (By.XPATH, '//img[contains(@src,"place") and contains(@src,"icon")]/../../..//*[text()!=""]'))).text
                 except:
                     address = ''
                 finally:
@@ -71,4 +68,3 @@ def get_address(driver, location_url):
 
 address = get_address(driver, 'https://www.google.com/maps/search/?api=1&query=Koncerten%20-%20Ollerup%20Efterskole%20Sang%20%26%20Musik')
 print(address)
-driver.save_screenshot('1.png')
